@@ -1,0 +1,29 @@
+{
+  "!yes.json": [
+    {
+      "Id": 0,
+      "Mark": null,
+      "Sample": "https://www.youtube.com/watch?v=dvm3QY-e-ts&list=PL19686A509157F51E&index=7",
+      "Title": "My music works favorites"
+    }
+  ],
+  "youtube-index=https://www.youtube.com/watch?v=$1&list=$2&index=$3": [
+    {
+      "Id": 1001,
+      "Mark": "2022-06-04",
+      "Title": "Youtube Indexed song in a playlist"
+    },
+    {
+      "Id": 0,
+      "Mark": null,
+      "Title": ""
+    }
+  ],
+  "~": [
+    {
+      "Id": -1,
+      "Mark": null,
+      "Title": ""
+    }
+  ]
+}
