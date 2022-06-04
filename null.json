@@ -1,0 +1,32 @@
+{
+  "!null.json": [
+    {
+      "Id": 0,
+      "Key": null,
+      "Mark": null,
+      "Title": "null"
+    }
+  ],
+  "sample=$1": [
+    {
+      "Id": 1001,
+      "Key": "url",
+      "Mark": "2022-06-04",
+      "Title": "sample 1"
+    },
+    {
+      "Id": 0,
+      "Key": "",
+      "Mark": null,
+      "Title": ""
+    }
+  ],
+  "~": [
+    {
+      "Id": -1,
+      "Key": "*",
+      "Mark": null,
+      "Title": ""
+    }
+  ]
+}
