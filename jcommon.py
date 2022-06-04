@@ -71,6 +71,17 @@ class GenericData():
                         tag[this] = ""
         return True, adict
 
+    def to_alist(self, adict) -> list:
+        if isinstance(adict, list):
+            return adict
+        if isinstance(adict, tuple):
+            return list(adict)
+        res = []
+        for key in sorted(adict):
+            elem = [key, [adict[key]]]
+            res.append(elem)
+        return res
+
 class AData(GenericData):
     """ Generic manipulation of data, to/ from JSON format.
     """
@@ -99,7 +110,7 @@ class AData(GenericData):
         else:
             cont = data
         astr = json.dumps(cont, indent=ind, sort_keys=asort, ensure_ascii=ensure)
-        return astr
+        return astr + "\n"
 
     def from_json(self, astring:str) -> bool:
         data = json.loads(astring)
