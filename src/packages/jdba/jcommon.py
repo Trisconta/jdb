@@ -6,6 +6,7 @@
 # pylint: disable=missing-function-docstring
 
 import json
+from jdba.jindex import JIndex
 
 J_ENSURE_ASCII = True
 
@@ -46,6 +47,7 @@ class GenericData():
     """ Abstract class for data manipulation
     """
     def __init__(self, name=""):
+        assert isinstance(name, str)
         self.name = name
 
     @staticmethod
@@ -90,10 +92,53 @@ class AData(GenericData):
         self._data = [] if data is None else data
         self._indent = 2
         self._do_sort = True
+        self.index = JIndex()
+
+    def raw(self):
+        return self._data
 
     def content(self) -> list:
         assert isinstance(self._data, list), self.name
         return self._data
+
+    def get_case(self, name:str):
+        """ Returns the table, or dictionary, from the 'case' name.
+        """
+        _, _, res = self.get_case_root(name)
+        return res
+
+    def get_case_root(self, name:str) -> tuple:
+        """ Returns the key, case root, and the case itself.
+        """
+        assert isinstance(name, str)
+        idxes = self.index
+        if idxes.initialized():
+            is_ok = True
+        else:
+            is_ok = self.do_index()
+        assert is_ok, f"get_case(): {name}"
+        key = idxes.byname["case"][name]
+        res = self._data.get(key)
+        if res is None:
+            return key, [], None
+        return key, self._data, res
+
+    def do_index(self) -> bool:
+        """ Generates 'byname' indexes.
+        """
+        data = self._data
+        byidx, byname = {}, {}
+        self.index.byname["idx"] = byidx
+        self.index.byname["case"] = byname
+        for idx, key in enumerate(data):
+            if key == "~":
+                return True
+            byidx[idx] = key
+            assert (idx == 0 and key.startswith("!")) or idx, key
+            prefix = key.split("=", maxsplit=1)[0]
+            name = prefix if idx > 0 else "!"
+            byname[name] = key
+        return False
 
     def string(self) -> str:
         return self.dump_json(self._data)
@@ -116,3 +161,24 @@ class AData(GenericData):
         data = json.loads(astring)
         self._data = data
         return True
+
+class DData(AData):
+    """ DList data - Dictionary List items
+    """
+    def __init__(self, data=None, name=""):
+        if data is None:
+            elems = {}
+        else:
+            elems = data
+        assert isinstance(elems, dict)
+        super().__init__(elems, name)
+
+    def content(self) -> list:
+        if isinstance(self._data, list):
+            return self._data
+        return [self._data]
+
+def read_json(fdin):
+    """ Read JSON from stream """
+    data = json.load(fdin)
+    return data
