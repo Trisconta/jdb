@@ -10,6 +10,8 @@ from jdba.jindex import JIndex
 
 J_ENSURE_ASCII = True
 
+DEF_ENCODING = "utf-8"
+
 SAMPLE_DLIST = {
     '!null.json': [
         {
@@ -46,9 +48,10 @@ SAMPLE_DLIST = {
 class GenericData():
     """ Abstract class for data manipulation
     """
-    def __init__(self, name=""):
+    def __init__(self, name="", encoding=DEF_ENCODING):
         assert isinstance(name, str)
         self.name = name
+        self._encoding = encoding
 
     @staticmethod
     def default_dlist():
