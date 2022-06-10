@@ -18,6 +18,7 @@ class TxcFile(jbox.IOJData):
         self._header = ""
         self._data = []
         self._num_lines_sep = 1
+        self._in_encode = ""
 
     def contents(self) -> str:
         """ Return string-based contents. """
@@ -85,6 +86,8 @@ class TxcFile(jbox.IOJData):
         if last:
             res.append(last)
         self._header = hdr
+        enc = get_coding_str(hdr)
+        self._in_encoding = "" if enc.startswith(":") else enc
         self._data = res
         return errs == 0
 
@@ -99,6 +102,16 @@ class TxcFile(jbox.IOJData):
             astr += '\n' * self._num_lines_sep
         self._astring = self._header + astr
         return True
+
+def get_coding_str(astr:str) -> str:
+    """ Returns ':msg' upon error, or the corresponding interpreted coding:
+		e.g. '#-*- coding: iso-8859-1 -*-'
+    """
+    spl = astr.split("coding:", maxsplit=1)
+    if len(spl) < 2:
+        return ":Invalid"
+    last = spl[-1].strip().split(" ", maxsplit=1)[0].strip()
+    return last
 
 def info_from_content(blocks, max_line=40) -> str:
     if not blocks:

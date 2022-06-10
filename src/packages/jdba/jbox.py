@@ -29,10 +29,11 @@ class IOJData(jcommon.GenericData):
 class JBox(IOJData):
     """ Generic manipulation of data, to/ from JSON format.
     """
-    def __init__(self, data=None, name=""):
+    def __init__(self, data=None, name="", encoding=None):
         super().__init__(name)
         self._data = {} if data is None else data
-        self._ensure_ascii = jcommon.J_ENSURE_ASCII
+        enc = jcommon.J_ENSURE_ASCII if encoding is None else encoding
+        self._ensure_ascii = enc
         self.dlist = None
 
     def load(self, path:str) -> bool:
