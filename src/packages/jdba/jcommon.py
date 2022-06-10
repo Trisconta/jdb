@@ -53,6 +53,16 @@ class GenericData():
         self.name = name
         self._encoding = encoding
 
+    def get_encoding(self) -> str:
+        """ Returns the used encoding name string.
+        """
+        astr = self._encoding
+        hint = self.name if self.name else "?"
+        assert astr, f"No encoding: {hint}"
+        if astr in ("latin-1",):
+            return "ISO-8859-1"
+        return astr
+
     @staticmethod
     def default_dlist():
         is_ok, dlist = GenericData.empty_dlist_data(SAMPLE_DLIST)
