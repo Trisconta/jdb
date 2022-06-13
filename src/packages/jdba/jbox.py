@@ -58,6 +58,14 @@ class JBox(IOJData):
             return False
         return True
 
+    def to_json(self) -> str:
+        """ Converts existing dlist to json. """
+        this = self.dlist
+        if this is None:
+            self.dlist = jcommon.DData(self._data, self.name)
+        this = self.dlist
+        return this.to_json()
+
     def _dump_json_string(self, ensure_ascii=True):
         """ Dump JSON from data
         """
