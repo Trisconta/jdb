@@ -45,13 +45,32 @@ SAMPLE_DLIST = {
 }
 
 
+class SingletonIO():
+    """ Singleton to handle default encodings.
+    """
+    _instance = None
+    default_encoding = DEF_ENCODING
+
+    def __new__(class_, *args, **kwargs):
+        if not isinstance(class_._instance, class_):
+            class_._instance = object.__new__(class_, *args, **kwargs)
+        return class_._instance
+
+    @staticmethod
+    def get_encoding():
+        astr = SingletonIO.default_encoding
+        assert astr
+        assert isinstance(astr, str)
+        return astr
+
+
 class GenericData():
     """ Abstract class for data manipulation
     """
-    def __init__(self, name="", encoding=DEF_ENCODING):
+    def __init__(self, name="", encoding=None):
         assert isinstance(name, str)
         self.name = name
-        self._encoding = encoding
+        self.set_encoding(encoding)
 
     def get_encoding(self) -> str:
         """ Returns the used encoding name string.
@@ -62,6 +81,16 @@ class GenericData():
         if astr in ("latin-1",):
             return "ISO-8859-1"
         return astr
+
+    def set_encoding(self, encoding) -> bool:
+        if encoding is None:
+            encoding = SingletonIO().default_encoding
+        if encoding in ("latin-1",):
+            encoding = "ISO-8859-1"
+        assert encoding
+        assert isinstance(encoding, str)
+        self._encoding = encoding
+        return True
 
     @staticmethod
     def default_dlist():
@@ -100,10 +129,11 @@ class GenericData():
 class AData(GenericData):
     """ Generic manipulation of data, to/ from JSON format.
     """
-    def __init__(self, data=None, name=""):
-        super().__init__(name)
+    def __init__(self, data=None, name="", encoding=None):
+        super().__init__(name, encoding)
         self._data = [] if data is None else data
         self._indent = 2
+        self._strict = False
         self._do_sort = True
         self.index = JIndex()
 
@@ -151,10 +181,19 @@ class AData(GenericData):
             prefix = key.split("=", maxsplit=1)[0]
             name = prefix if idx > 0 else "!"
             byname[name] = key
+        if not self._strict:
+            return True
         return False
 
     def string(self) -> str:
         return self.dump_json(self._data)
+
+    def load(self, path:str) -> bool:
+        with open(path, "r", encoding=self._encoding) as fdin:
+            data = read_json(fdin)
+        self._data = data
+        self.index = JIndex()
+        return True
 
     def to_json(self) -> str:
         return self.dump_json(self._data)
@@ -178,13 +217,13 @@ class AData(GenericData):
 class DData(AData):
     """ DList data - Dictionary List items
     """
-    def __init__(self, data=None, name=""):
+    def __init__(self, data=None, name="", encoding=None):
         if data is None:
             elems = {}
         else:
             elems = data
         assert isinstance(elems, dict)
-        super().__init__(elems, name)
+        super().__init__(elems, name, encoding=encoding)
 
     def content(self) -> list:
         if isinstance(self._data, list):

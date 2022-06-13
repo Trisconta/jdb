@@ -7,6 +7,7 @@
 
 import sys
 import os.path
+import jdba
 import jdba.jcommon as jcommon
 from jdba.jbox import JBox
 
@@ -41,6 +42,8 @@ def do_add(args):
 
 def process_io(io_fname:str, field:str, is_utf=False) -> str:
     enc_in = "utf-8" if is_utf else "ISO-8859-1"
+    jdba.jcommon.SingletonIO().default_encoding = enc_in
+    print("# Reading:", io_fname)
     with open(io_fname, "r", encoding=enc_in) as fdin:
         data = jcommon.read_json(fdin)
     mydata = jcommon.AData(data, name="test1")

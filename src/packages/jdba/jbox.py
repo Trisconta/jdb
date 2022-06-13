@@ -31,6 +31,7 @@ class JBox(IOJData):
     """
     def __init__(self, data=None, name="", encoding=None):
         super().__init__(name)
+        self.set_encoding(encoding)
         self._data = {} if data is None else data
         enc = jcommon.J_ENSURE_ASCII if encoding is None else encoding
         self._ensure_ascii = enc

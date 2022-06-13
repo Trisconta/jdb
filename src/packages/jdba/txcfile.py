@@ -18,7 +18,7 @@ class TxcFile(jbox.IOJData):
         self._header = ""
         self._data = []
         self._num_lines_sep = 1
-        self._in_encode = ""
+        self._in_encoding = ""
 
     def contents(self) -> str:
         """ Return string-based contents. """
