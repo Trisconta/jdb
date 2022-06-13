@@ -185,6 +185,9 @@ class AData(GenericData):
             return True
         return False
 
+    def __str__(self) -> str:
+        return self.string()
+
     def string(self) -> str:
         return self.dump_json(self._data)
 

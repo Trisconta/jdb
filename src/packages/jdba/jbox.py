@@ -32,10 +32,16 @@ class JBox(IOJData):
     def __init__(self, data=None, name="", encoding=None):
         super().__init__(name)
         self.set_encoding(encoding)
-        self._data = {} if data is None else data
+        if data is None:
+            self._data = {}
+        else:
+            self._data = data._data if isinstance(data, JBox) else data
         enc = jcommon.J_ENSURE_ASCII if encoding is None else encoding
         self._ensure_ascii = enc
         self.dlist = None
+
+    def raw(self):
+        return self._data
 
     def load(self, path:str) -> bool:
         self._data = {}
