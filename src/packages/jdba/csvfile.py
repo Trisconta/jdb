@@ -1,7 +1,6 @@
-# txcfile.py  (c)2022  Henrique Moreira
+# csvfile.py  (c)2022  Henrique Moreira
 
-""" TxcFile - a simple text file sequence
-See also: tinycode/waxpage/txc.py
+""" a simple class to handle CSV files
 """
 
 # pylint: disable=missing-function-docstring
@@ -22,6 +21,7 @@ class CsvFile(jdba.jbox.IOJData):
         self._data = []
         self._num_lines_sep = 0
         self._in_encoding = ""
+        self._maxsplit = -1
 
     def contents(self) -> str:
         """ Return string-based contents. """
@@ -34,10 +34,12 @@ class CsvFile(jdba.jbox.IOJData):
         """ Returns the header, if any. """
         return self._header
 
-    def load(self, path:str) -> bool:
-        self._path = path
+    def load(self, path:str="") -> bool:
+        if path:
+            self._path = path
+        fname = self._path
         try:
-            with open(path, "r", encoding=self._encoding) as fdin:
+            with open(fname, "r", encoding=self._encoding) as fdin:
                 astr = fdin.read()
         except FileNotFoundError:
             return False
@@ -57,7 +59,6 @@ class CsvFile(jdba.jbox.IOJData):
     def parse(self, err=None) -> bool:
         """ Parse CSV formatting. """
         assert err is None
-        c_split = CsvFile._split_str
         errs = 0
         hdr, idx = "", 0
         spl = self._astring.splitlines()
@@ -70,21 +71,31 @@ class CsvFile(jdba.jbox.IOJData):
         res = []
         for line in spl[idx:]:
             astr = line.rstrip()
-            if c_split:
-                res.append(astr.split(c_split))
-            else:
-                res.append(astr)
+            res.append(self._from_str_split(astr))
         self._header = hdr
         self._in_encoding = self._encoding
         assert self._encoding, self.name
         self._data = res
         return errs == 0
 
-    def set_split(self, astr=","):
+    def set_split(self, astr=",", maxsplit=-1):
         CsvFile._split_str = astr
+        self._maxsplit = maxsplit
 
     def set_tab_split(self):
         self.set_split("\t")
+
+    def _from_str_split(self, astr):
+        c_split = CsvFile._split_str
+        if c_split:
+            if self._maxsplit <= 0:
+                elem = astr.split(c_split)
+            else:
+                elem = astr.split(c_split, maxsplit=self._maxsplit)
+        else:
+            elem = astr
+        return elem
+
 
 # Main script
 if __name__ == "__main__":
