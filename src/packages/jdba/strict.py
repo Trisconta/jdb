@@ -81,23 +81,30 @@ def validate_uniqueness(elems, infos, depth) -> str:
     if depth > 10:
         # Avoid too much recursiveness
         return ""
-    if isinstance(elems, list):
-        for item in elems:
-            # Each one of the lists dicts has to be unique
-            msg = validate_uniqueness(item, infos, depth+1)
-            if msg:
-                return msg
-        return ""
-    if not isinstance(elems, dict):
-        return f"Not a dictionary {infos} (depth={depth}), {type(elems)}"
+    if isinstance(elems, dict):
+        return validate_dict_keying(elems, infos)
+    if not isinstance(elems, list):
+        return f"Not a list {infos} (depth={depth}), {type(elems)}"
     ids = {}
-    for idx, key in enumerate(sorted(elems), 1):
-        elem = elems[key]
-        if key in ids:
-            there = ids[key]
-            return f"Duplicate field idx={idx} {infos}: {key}, <<{there}>>"
-        #print(infos, "key:", key, elem)
-        ids[key] = elem
+    if not elems:
+        return ""
+    if len(elems) == 1:
+        return validate_uniqueness(elems[0], infos, depth+1)
+    for idx, elem in enumerate(sorted(elems), 1):
+        print("idx:", idx, elem)
+        if elem in ids:
+            there = ids[elem]
+            return f"Duplicate field idx={idx} {infos}: <<{there}>>"
+        ids[elem] = idx
+    return ""
+
+def validate_dict_keying(elems:dict, infos):
+    """ Dictionary has, by nature, unique keys.
+    Just checking keying can be sorted, and keys are not empty.
+    """
+    for key in sorted(elems):
+        if not key:
+            return f"Bad dictionary: {infos}"
     return ""
 
 # Main script
