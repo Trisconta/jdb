@@ -26,6 +26,10 @@ class IOJData(jcommon.GenericData):
             fdout.write(astr)
         return True
 
+    def _write_stream(self, fdout, astr:str) -> bool:
+        fdout.write(astr)
+        return True
+
 class JBox(IOJData):
     """ Generic manipulation of data, to/ from JSON format.
     """
@@ -39,6 +43,9 @@ class JBox(IOJData):
         enc = jcommon.J_ENSURE_ASCII if encoding is None else encoding
         self._ensure_ascii = enc
         self.dlist = None
+
+    def to_string(self) -> str:
+        return self._dump_json_string()
 
     def raw(self):
         return self._data
@@ -65,6 +72,15 @@ class JBox(IOJData):
             return False
         return True
 
+    def save_stream(self, fdout) -> bool:
+        astr = self._dump_json_string(self._ensure_ascii)
+        astr += "\n"
+        try:
+            self._write_stream(fdout, astr)
+        except FileNotFoundError:
+            return False
+        return True
+
     def to_json(self) -> str:
         """ Converts existing dlist to json. """
         this = self.dlist
@@ -80,6 +96,9 @@ class JBox(IOJData):
         ind, asort, ensure = 2, True, ensure_ascii
         astr = json.dumps(cont, indent=ind, sort_keys=asort, ensure_ascii=ensure)
         return astr
+
+    def __str__(self) -> str:
+        return self.to_string()
 
 # Main script
 if __name__ == "__main__":
