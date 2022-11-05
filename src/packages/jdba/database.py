@@ -21,6 +21,7 @@ class GenDatabase(jdba.jcommon.GenericData):
         myname = name if name else "dbx"
         super().__init__(myname, encoding)
         self._reclassify = False
+        self._auto_validate = False
         self._msg = ""
 
     def message(self) -> str:
@@ -38,11 +39,16 @@ class Database(GenDatabase):
         # you want to assure that schema will be indented and sorted properly.
         if self._reclassify:
             self._schema.saver()
-        self._msg = self._schema.validate(self._index)
+        if self._auto_validate:
+            self._msg = self._schema.validate(self._index)
 
     def get_indexes(self) -> dict:
         """ Returns all indexes """
         return self._index
+
+    def tables(self) -> dict:
+        """ Returns all indexes """
+        return self._index["tables"]
 
     def basic_ok(self) -> bool:
         """ Returns True if everything is basically ok. """
@@ -63,6 +69,7 @@ class Database(GenDatabase):
             adir, listed = self._listed_dir(path)
         schema, names, paths = {}, {}, {}
         for filename in listed:
+            print("Loading:", filename)
             cpath = os.path.realpath(os.path.join(adir, filename))
             if filename.endswith(".json"):
                 tname = filename[:-len(".json")]
