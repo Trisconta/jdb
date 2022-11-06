@@ -201,9 +201,12 @@ class AData(GenericData):
         """ Generates 'byname' indexes.
         """
         data = self._data
-        byidx, byname = {}, {}
-        self.index.byname["idx"] = byidx
-        self.index.byname["case"] = byname
+        byidx, byname, ptrs = {}, {}, {}
+        self.index.byname = {
+            "idx": byidx,
+            "case": byname,
+            "ptr": ptrs,
+        }
         for idx, key in enumerate(data):
             if key == "~":
                 return True
@@ -212,9 +215,9 @@ class AData(GenericData):
             prefix = key.split("=", maxsplit=1)[0]
             name = prefix if idx > 0 else "!"
             byname[name] = key
-        if not self._strict:
-            return True
-        return False
+            if name in data:
+                ptrs[name] = data[name]
+        return not self._strict
 
     def __str__(self) -> str:
         return self.string()
