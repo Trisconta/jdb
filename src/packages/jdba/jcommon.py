@@ -144,6 +144,13 @@ class AData(GenericData):
         assert isinstance(self._data, list), self.name
         return self._data
 
+    def get_cases(self) -> list:
+        """ Returns the content keys, excluding those starting by '!' or '~'
+        """
+        excl = ("!", "~")
+        res = [name for name in self._data if not name.startswith(excl)]
+        return res
+
     def get_case(self, name:str):
         """ Returns the table, or dictionary, from the 'case' name.
         """

@@ -50,9 +50,32 @@ class Database(GenDatabase):
         """ Returns all indexes """
         return self._index["tables"]
 
+    def table(self, name:str):
+        return self._index["tables"][name][1]
+
     def basic_ok(self) -> bool:
         """ Returns True if everything is basically ok. """
         return self._msg == ""
+
+    def save(self, name:str="") -> bool:
+        """ Saves table(s): if name provided, saves only the corresponding table.
+        """
+        fails = []
+        if self._msg:
+            return False
+        if name:
+            path = self._paths[name]
+            print("Saving:", name, "; at:", path)
+            return self.table(name).save(path)
+        for key in sorted(self._paths):
+            assert key, self.name
+            is_ok = self.save(key)
+            if not is_ok:
+                fails.append(key)
+        if fails:
+            self._msg = f"Failed Save(s): {'; '.join(fails)}"
+            return False
+        return True
 
     def complain_err(self, msg, opt):
         if opt:
@@ -69,9 +92,9 @@ class Database(GenDatabase):
             adir, listed = self._listed_dir(path)
         schema, names, paths = {}, {}, {}
         for filename in listed:
-            print("Loading:", filename)
             cpath = os.path.realpath(os.path.join(adir, filename))
             if filename.endswith(".json"):
+                print("Loading:", filename)
                 tname = filename[:-len(".json")]
                 if tname in ("schema",):
                     new = JBox(name=cpath)
@@ -86,7 +109,9 @@ class Database(GenDatabase):
                     names[tname], paths[tname] = filename, cpath
         #print("Read:", path, "; encoding:", self.get_encoding())
         #print("- NAMES:", names, "\n- PATHS:", paths)
-        assert schema, self.name
+        if not schema:
+            self._msg = f"No json at: {path}"
+            schema = StrictSchema(JBox(name="empty"), [])
         return schema, names, paths
 
     def _reload(self) -> dict:
