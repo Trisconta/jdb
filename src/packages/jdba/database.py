@@ -57,7 +57,7 @@ class Database(GenDatabase):
         """ Returns True if everything is basically ok. """
         return self._msg == ""
 
-    def save(self, name:str="") -> bool:
+    def save(self, name:str="", debug=0) -> bool:
         """ Saves table(s): if name provided, saves only the corresponding table.
         """
         fails = []
@@ -65,7 +65,8 @@ class Database(GenDatabase):
             return False
         if name:
             path = self._paths[name]
-            print("Saving:", name, "; at:", path)
+            if debug > 0:
+                print(f"Saving {name} at: {path}")
             return self.table(name).save(path)
         for key in sorted(self._paths):
             assert key, self.name
@@ -75,6 +76,8 @@ class Database(GenDatabase):
         if fails:
             self._msg = f"Failed Save(s): {'; '.join(fails)}"
             return False
+        if debug > 0:
+            print(f"Saved {self.name} all")
         return True
 
     def complain_err(self, msg, opt):
