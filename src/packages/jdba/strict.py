@@ -5,13 +5,16 @@
 
 # pylint: disable=missing-function-docstring
 import jdba.jcommon
+from jdba.jcommon import overview
 
-class StrictSchema(jdba.jcommon.GenericData):
+DEBUG = 0
+
+class StrictSchema(jdba.jcommon.DataSchema):
     """ Strict database schemas
     """
     def __init__(self, obj, inlist, name="", encoding=None):
         myname = name if name else "schema"
-        super().__init__(myname, encoding)
+        super().__init__(obj.raw(), myname, encoding)
         self._path = obj.name
         self._myself = obj
         self.inlist = inlist
@@ -25,7 +28,7 @@ class StrictSchema(jdba.jcommon.GenericData):
         """
         return self._myself.save(self._path)
 
-    def validate(self, ndexing) -> str:
+    def validate(self, ndexing, debug=DEBUG) -> str:
         """ Returns an empty string if all ok. """
         order = []
         used = {}
@@ -39,14 +42,20 @@ class StrictSchema(jdba.jcommon.GenericData):
         if not ndexing:
             return "Nothing to validate"
         for tname, cases, box in order:
+            if debug > 0:
+                print(f"validate() tname={tname}, order is {overview(order)}")
             dlist, _, ok_code = ndexing["tables"][tname]
             if not ok_code:
                 return f"Faulty '{tname}'"
-            #print(used[tname])
             for acase in used[tname]:
                 for idx, dct in enumerate(acase, 1):
+                    if debug > 0:
+                        print(
+                            f"validate() acase='{acase}' idx={idx}/{len(acase)}",
+                            dct,
+                        )
                     an_id, key, field_type = dct["Id"], dct["Key"], dct["FieldType"]
-                    infos = (tname, key)
+                    infos = (tname, key, an_id, dct["Method"])
                     #print("infos:", infos, "; an_id:", an_id, field_type)
                     assert an_id == idx, field_type
                     elems = dlist.get_case(key)
@@ -77,10 +86,18 @@ def validate_unique_id(elems, infos) -> str:
         ids[an_id] = elem
     return ""
 
-def validate_uniqueness(elems, infos, depth) -> str:
+def validate_uniqueness(elems, infos, depth, debug=1) -> str:
+    if debug > 0:
+        print(
+            f"validate_uniqueness(), depth={depth}",
+            infos, overview(elems),
+        )
     if depth > 10:
         # Avoid too much recursiveness
         return ""
+    _, _, _, method = infos
+    if method:
+        return ""	# TODO
     if isinstance(elems, dict):
         return validate_dict_keying(elems, infos)
     if not isinstance(elems, list):

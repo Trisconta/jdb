@@ -53,6 +53,11 @@ class Database(GenDatabase):
     def table(self, name:str):
         return self._index["tables"][name][1]
 
+    def schema(self):
+        """ Returns database schema class instance. """
+        assert self._schema, self.name
+        return self._schema
+
     def basic_ok(self) -> bool:
         """ Returns True if everything is basically ok. """
         return self._msg == ""

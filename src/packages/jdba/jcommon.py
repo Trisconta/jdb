@@ -50,11 +50,15 @@ class SingletonIO():
     """
     _instance = None
     default_encoding = DEF_ENCODING
+    max_overview = {
+        "str":  60,
+        "depth": 3,
+    }
 
-    def __new__(class_, *args, **kwargs):
-        if not isinstance(class_._instance, class_):
-            class_._instance = object.__new__(class_, *args, **kwargs)
-        return class_._instance
+    def __new__(cls, *args, **kwargs):
+        if not isinstance(cls._instance, cls):
+            cls._instance = object.__new__(cls, *args, **kwargs)
+        return cls._instance
 
     @staticmethod
     def get_encoding():
@@ -125,6 +129,26 @@ class GenericData():
             elem = [key, [adict[key]]]
             res.append(elem)
         return res
+
+class DataSchema(GenericData):
+    """ Basic data-schema JSON abstract class
+    """
+    def __init__(self, data, name="", encoding=None):
+        self._ptr = data
+        super().__init__(name, encoding)
+
+    def to_string(self) -> str:
+        if self._ptr is None:
+            return ""
+        return self._json_dump()
+
+    def __str__(self) -> str:
+        return self.to_string()
+
+    def _json_dump(self):
+        ind, asort, ensure = 2, True, True
+        astr = json.dumps(self._ptr, indent=ind, sort_keys=asort, ensure_ascii=ensure)
+        return astr
 
 class AData(GenericData):
     """ Generic manipulation of data, to/ from JSON format.
@@ -244,3 +268,37 @@ def read_json(fdin):
     """ Read JSON from stream """
     data = json.load(fdin)
     return data
+
+def overview(data, depth=0):
+    """ Returns an object overview; interesting for tables, etc.
+    """
+    if depth > SingletonIO.max_overview["depth"]:
+        return "(...)"
+    if data is None:
+        return "<null>"
+    maxchrs = SingletonIO.max_overview["str"]
+    if isinstance(data, (list, tuple)):
+        if depth <= 0:
+            res = [
+                {
+                    "Type": type(item),
+                    "Len": len(item),
+                    "Cont": overview(item, depth+1),
+                } for item in data
+            ]
+        else:
+            res = [
+                f"list-len={len(data)}"
+            ] + [
+                overview(item, depth+1) for item in data
+            ]
+        return res
+    if isinstance(data, dict):
+        res = sorted(data)
+        return res
+    if isinstance(data, str):
+        if len(data) > maxchrs:
+            return data[:maxchrs] + "..."
+        return data
+    res = f"(type={type(data)})"
+    return res
