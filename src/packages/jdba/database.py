@@ -22,6 +22,7 @@ class GenDatabase(jdba.jcommon.GenericData):
         super().__init__(myname, encoding)
         self._reclassify = False
         self._auto_validate = False
+        self._validate_before_save = True
         self._msg = ""
 
     def message(self) -> str:
@@ -50,13 +51,22 @@ class Database(GenDatabase):
         """ Returns all indexes """
         return self._index["tables"]
 
-    def table(self, name:str):
+    def table(self, name:str=""):
+        assert isinstance(name, str)
+        names = sorted(self.tables())
+        assert names, f"table() name='{name}'"
+        name = name if name else names[0]
         return self._index["tables"][name][1]
 
     def schema(self):
         """ Returns database schema class instance. """
         assert self._schema, self.name
         return self._schema
+
+    def valid_schema(self) -> bool:
+        """ Returns True if boxes are according to the schema. """
+        msg = self._validate_schema()
+        return msg == ""
 
     def basic_ok(self) -> bool:
         """ Returns True if everything is basically ok. """
@@ -65,25 +75,44 @@ class Database(GenDatabase):
     def save(self, name:str="", debug=0) -> bool:
         """ Saves table(s): if name provided, saves only the corresponding table.
         """
+        msg = "; no check"
+        if self._validate_before_save:
+            msg = self._validate_schema()
+            if msg:
+                self._msg = msg
+                return False
+            msg = "; checked schema"
+        if debug > 0:
+            print("About to save:", sorted(self.tables()), msg)
+        is_ok, invalid, _ = self._save_tables(name, debug)
+        if debug > 0:
+            if invalid:
+                print("At least one invalid table:", invalid)
+            else:
+                print(f"Saved {self.name} all", is_ok)
+        return is_ok
+
+    def _save_tables(self, name, debug):
         fails = []
+        failed = ""
         if self._msg:
-            return False
+            return False, "", []
         if name:
             path = self._paths[name]
             if debug > 0:
                 print(f"Saving {name} at: {path}")
-            return self.table(name).save(path)
+            return self.table(name).save(path), "", []
         for key in sorted(self._paths):
             assert key, self.name
-            is_ok = self.save(key)
+            is_ok = self._save_tables(key, debug)
             if not is_ok:
+                if not failed:
+                    failed = key
                 fails.append(key)
         if fails:
             self._msg = f"Failed Save(s): {'; '.join(fails)}"
-            return False
-        if debug > 0:
-            print(f"Saved {self.name} all")
-        return True
+            return False, failed, fails
+        return True, "", []
 
     def complain_err(self, msg, opt):
         if opt:
@@ -121,6 +150,11 @@ class Database(GenDatabase):
             self._msg = f"No json at: {path}"
             schema = StrictSchema(JBox(name="empty"), [])
         return schema, names, paths
+
+    def _validate_schema(self) -> str:
+        """ Validates boxes against schema. Returns empty if all ok. """
+        msg = self.schema().validate(self.get_indexes())
+        return msg
 
     def _reload(self) -> dict:
         res = {

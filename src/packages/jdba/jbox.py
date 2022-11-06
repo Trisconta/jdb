@@ -10,7 +10,14 @@ each 'case' designates one list of dictionaries.
 
 import os
 import json
+from copy import deepcopy
 import jdba.jcommon as jcommon
+
+BASIC_DICT_TAIL = {
+    "Id": 0,
+    "Name": None,
+}
+
 
 class IOJData(jcommon.GenericData):
     """ Input/ output operations for JSON data.
@@ -49,6 +56,37 @@ class JBox(IOJData):
 
     def raw(self):
         return self._data
+
+    def add_to(self, acase:str, new:dict) -> bool:
+        data = self._data.get(acase)
+        if data is None:
+            return False
+        is_ok, _ = self._inject_new(acase, data, new, "APP")
+        return is_ok
+
+    def _inject_new(self, acase, data, new, s_append) -> tuple:
+        assert acase, self.name
+        assert s_append and isinstance(s_append, str), acase
+        alen = len(data)
+        if alen <= 0:
+            # Should have at least one element
+            return False, BASIC_DICT_TAIL
+        last_id = 900
+        last = data[-1]
+        an_id = last["Id"]
+        assert an_id == 0, f"{acase}: bad last elem Id={an_id}"
+        an_id = last_id + 1
+        mine = deepcopy(last)
+        del mine["Id"]
+        for key, aval in new.items():
+            mine[key] = aval
+        if "Id" not in mine:
+            mine["Id"] = last_id
+        if s_append == "APP":
+            data.insert(alen - 1, mine)
+        else:
+            return False, None
+        return True, mine
 
     def load(self, path:str) -> bool:
         self._data = {}
