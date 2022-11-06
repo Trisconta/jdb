@@ -36,6 +36,7 @@ class Database(GenDatabase):
         self._path = path
         self._schema, self._names, self._paths = self._initializer(path)
         self._index = self._reload()
+        self.default_box = ""
         #self._reclassify = True  # -- uncomment if you changed schema, and
         # you want to assure that schema will be indented and sorted properly.
         if self._reclassify:
@@ -53,10 +54,9 @@ class Database(GenDatabase):
 
     def table(self, name:str=""):
         assert isinstance(name, str)
-        names = sorted(self.tables())
-        assert names, f"table() name='{name}'"
-        name = name if name else names[0]
-        return self._index["tables"][name][1]
+        tname, tbl = self._get_table(name)
+        assert tname, self.name
+        return tbl
 
     def schema(self):
         """ Returns database schema class instance. """
@@ -120,7 +120,7 @@ class Database(GenDatabase):
         else:
             print(msg)
 
-    def _initializer(self, path:str):
+    def _initializer(self, path:str, debug=0):
         assert isinstance(path, str)
         adir = path
         try:
@@ -131,7 +131,8 @@ class Database(GenDatabase):
         for filename in listed:
             cpath = os.path.realpath(os.path.join(adir, filename))
             if filename.endswith(".json"):
-                print("Loading:", filename)
+                if debug > 0:
+                    print("Loading:", filename)
                 tname = filename[:-len(".json")]
                 if tname in ("schema",):
                     new = JBox(name=cpath)
@@ -150,6 +151,15 @@ class Database(GenDatabase):
             self._msg = f"No json at: {path}"
             schema = StrictSchema(JBox(name="empty"), [])
         return schema, names, paths
+
+    def _get_table(self, name):
+        names = sorted(self.tables())
+        assert names, f"table() name='{name}'"
+        if name:
+            tname = name
+        else:
+            tname = self.default_box if self.default_box else names[0]
+        return tname, self._index["tables"][tname][1]
 
     def _validate_schema(self) -> str:
         """ Validates boxes against schema. Returns empty if all ok. """
@@ -177,6 +187,11 @@ class Database(GenDatabase):
     def _listed_dir(self, path:str) -> tuple:
         adir = os.path.dirname(os.path.realpath(path))
         return adir, os.listdir(adir)
+
+def loader(adir, main_table=""):
+    dbx = jdba.database.Database(adir)
+    dbx.default_box = main_table
+    return dbx
 
 def slim_list(alist):
     assert isinstance(alist, list)
