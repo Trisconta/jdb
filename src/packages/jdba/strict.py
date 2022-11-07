@@ -69,8 +69,9 @@ class StrictSchema(jdba.jcommon.DataSchema):
                         )
                     an_id, key, field_type = dct["Id"], dct["Key"], dct["FieldType"]
                     infos = (tname, key, an_id, dct["Method"])
-                    #print("infos:", infos, "; an_id:", an_id, field_type)
-                    assert an_id == idx, field_type
+                    #print("infos:", infos, "; an_id:", an_id, idx, field_type)
+                    msg = f"Failed case={key}, field_type={field_type}, {idx}, got {an_id}"
+                    assert an_id == idx, msg
                     elems = dlist.get_case(key)
                     msg = xvalidate_kinds(field_type, elems, infos)
                     if msg:

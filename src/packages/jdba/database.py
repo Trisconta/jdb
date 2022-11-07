@@ -63,9 +63,11 @@ class Database(GenDatabase):
         assert self._schema, self.name
         return self._schema
 
-    def valid_schema(self) -> bool:
+    def valid_schema(self, debug=0) -> bool:
         """ Returns True if boxes are according to the schema. """
         msg = self._validate_schema()
+        if debug > 0:
+            print(f"Debug: valid_schema(): {msg if msg else 'OK'}")
         return msg == ""
 
     def basic_ok(self) -> bool:
