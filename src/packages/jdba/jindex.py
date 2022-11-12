@@ -40,6 +40,14 @@ class JIndex(GeneralIndex):
     def id_hash(self) -> dict:
         return self._hash
 
+    def id_to_idx(self, acase:str) -> dict:
+        """ Returns the dictionary that indexes an 'Id' to the list index of that 'sequence'. """
+        dct = self._hash[acase]["id-to-idx"]
+        assert isinstance(dct, dict), "Expected dict"
+        if None in dct:
+            return {}
+        return dct
+
     def do_id_hash(self) -> list:
         """ Returns the list of normalized cases.
         """
@@ -67,17 +75,23 @@ class JIndex(GeneralIndex):
 		pos.
 		pos.
         """
-
         assert last["Id"] == 0, 'Expected last "Id: 0"'
         id_to_name, name_to_id = {}, {}
         knames = {
             "keying": [],
             "dupname": [],
         }
+        where = {}
+        msgs = []
         for idx, item in enumerate(data):
             an_id = item["Id"]
             if an_id <= 0:
                 continue
+            if an_id in where:
+                msg = f"Duplicate Id={an_id}, is: {data[where[an_id]]}"
+                msgs.append(msg)
+            else:
+                where[an_id] = idx
             whot, namer = self._best_name(item)
             if knames["keying"]:
                 if whot not in knames["keying"]:
@@ -94,6 +108,9 @@ class JIndex(GeneralIndex):
         name_to_id["~"] = anyout if anyout else 0
         mash["id-to-name"] = id_to_name
         mash["name-to-id"] = name_to_id
+        if msgs:
+            where = {None: msgs}
+        mash["id-to-idx"] = where
         return True
 
     def _best_name(self, dct):

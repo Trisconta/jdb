@@ -74,8 +74,9 @@ class StrictSchema(jdba.jcommon.DataSchema):
                     assert an_id == idx, msg
                     elems = dlist.get_case(key)
                     msg = xvalidate_kinds(field_type, elems, infos)
+                    assert isinstance(msg, str)
                     if msg:
-                        return msg
+                        return f"case@{key} {msg}"
         return ""
 
 def xvalidate_kinds(field_type, elems, infos) -> str:

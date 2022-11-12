@@ -75,6 +75,8 @@ class Database(GenDatabase):
         msg = self._validate_schema()
         if debug > 0:
             print(f"Debug: valid_schema(): {msg if msg else 'OK'}")
+        if msg:
+            self._msg = msg
         return msg == ""
 
     def basic_ok(self) -> bool:
