@@ -31,9 +31,10 @@ class GenDatabase(jdba.jcommon.GenericData):
 class Database(GenDatabase):
     """ (JSON) Database handling
     """
-    def __init__(self, path, name="", encoding=None):
+    def __init__(self, path, name="", encoding=None, has_schema=True):
         super().__init__(name, encoding)
         self._path = path
+        self._init_schema = {} if has_schema else None
         self._schema, self._names, self._paths = self._initializer(path)
         self._index = self._reload()
         self.default_box = ""
@@ -43,6 +44,12 @@ class Database(GenDatabase):
             self._schema.saver()
         if self._auto_validate:
             self._msg = self._schema.validate(self._index)
+
+    def path_refs(self) -> dict:
+        return {} if self._msg else self._paths
+
+    def all_paths(self) -> list:
+        return [self._paths[key] for key in sorted(self._paths)]
 
     def get_indexes(self) -> dict:
         """ Returns all indexes """
@@ -150,7 +157,8 @@ class Database(GenDatabase):
         #print("Read:", path, "; encoding:", self.get_encoding())
         #print("- NAMES:", names, "\n- PATHS:", paths)
         if not schema:
-            self._msg = f"No json at: {path}"
+            if self._init_schema is not None:
+                self._msg = f"No json schema at: {path}"
             schema = StrictSchema(JBox(name="empty"), [])
         return schema, names, paths
 

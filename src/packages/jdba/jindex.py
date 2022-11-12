@@ -21,7 +21,7 @@ class GeneralIndex():
         self.byname = {}
         self._hash = {}
 
-    def get_ptr(name:str):
+    def get_ptr(self, name:str):
         return self.byname["ptr"][name]
 
 class JIndex(GeneralIndex):
