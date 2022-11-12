@@ -6,7 +6,7 @@
 # pylint: disable=missing-function-docstring
 
 from copy import deepcopy
-import jcommon
+import jdba.jcommon as jcommon
 
 def main():
     is_ok = do_test1()
