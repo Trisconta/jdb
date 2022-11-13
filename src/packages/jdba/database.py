@@ -106,6 +106,8 @@ class Database(GenDatabase):
     def _save_tables(self, name, debug):
         fails = []
         failed = ""
+        if debug > 0:
+            print("::: Save tables, msg:", self._msg if self._msg else "-")
         if self._msg:
             return False, "", []
         if name:
@@ -114,6 +116,7 @@ class Database(GenDatabase):
                 print(f"Saving {name} at: {path}")
             return self.table(name).save(path), "", []
         for key in sorted(self._paths):
+            #print("::: Save table:", key)
             assert key, self.name
             is_ok = self._save_tables(key, debug)
             if not is_ok:
@@ -177,6 +180,12 @@ class Database(GenDatabase):
         """ Validates boxes against schema. Returns empty if all ok. """
         msg = self.schema().validate(self.get_indexes())
         return msg
+
+    def corrected(self) -> bool:
+        if not self._msg:
+            return False
+        self._msg = ""
+        return True
 
     def _reload(self) -> dict:
         res = {
