@@ -50,6 +50,7 @@ class JBox(IOJData):
         enc = jcommon.J_ENSURE_ASCII if encoding is None else encoding
         self._ensure_ascii = enc
         self.dlist = None
+        self.new_idx = {}
 
     def to_string(self) -> str:
         return self._dump_json_string()
@@ -61,7 +62,8 @@ class JBox(IOJData):
         data = self._data.get(acase)
         if data is None:
             return False
-        is_ok, _ = self._inject_new(acase, data, new, "APP")
+        is_ok, _, new_idx = self._inject_new(acase, data, new, "APP")
+        self.new_idx[acase] = new_idx
         return is_ok
 
     def _inject_new(self, acase, data, new, s_append) -> tuple:
@@ -70,23 +72,23 @@ class JBox(IOJData):
         alen = len(data)
         if alen <= 0:
             # Should have at least one element
-            return False, BASIC_DICT_TAIL
+            return False, BASIC_DICT_TAIL, -1
         last_id = 900
         last = data[-1]
         an_id = last["Id"]
         assert an_id == 0, f"{acase}: bad last elem Id={an_id}"
-        an_id = last_id + 1
         mine = deepcopy(last)
         del mine["Id"]
         for key, aval in new.items():
             mine[key] = aval
         if "Id" not in mine:
             mine["Id"] = last_id
+        new_idx = alen - 1
         if s_append == "APP":
-            data.insert(alen - 1, mine)
+            data.insert(new_idx, mine)
         else:
-            return False, None
-        return True, mine
+            return False, None, -1
+        return True, mine, new_idx
 
     def load(self, path:str) -> bool:
         self._data = {}
@@ -100,8 +102,13 @@ class JBox(IOJData):
         self._data = data
         return True
 
+    def flush(self) -> bool:
+        self.new_idx = {}
+        return True
+
     def save(self, path:str) -> bool:
         """ Save content to a file, at 'path'. """
+        self.flush()
         astr = self._dump_json_string(self._ensure_ascii)
         astr += "\n"
         try:
