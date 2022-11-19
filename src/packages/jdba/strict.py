@@ -34,7 +34,7 @@ class StrictSchema(jdba.jcommon.DataSchema):
         used = {}
         box = None
         for box in self.inlist:
-            an_id, tname, cases = box["Id"], box["Key"], box["Cases"]
+            an_id, tname, cases = box["Id"], box["Key"], box["UCases"]
             assert an_id >= 0, tname
             assert box["Title"], tname
             #print(tname, cases); print()
