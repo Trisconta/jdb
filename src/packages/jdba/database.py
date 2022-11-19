@@ -83,9 +83,40 @@ class Database(GenDatabase):
             self._msg = msg
         return msg == ""
 
+    def index_all(self) -> list:
+        """ Use existing schema to 'do_id_hash()' in all dlist.index(es).
+        Returns a list with indication of the unique indexes ('u-id').
+        """
+        res = []
+        i_list = self._schema.inlist
+        # [(tup["Key"], [(tup["Key"], tup, [(tup["Key"], ala) for ala in ucase if ala["FieldType"] == "u-id"]) for ucase in tup["UCases"]]) for tup in i_list]
+        for tup in i_list:
+            box = tup["Key"]
+            for ucase in tup["UCases"]:
+                for ala in ucase:
+                    acase = ala["Key"]
+                    if ala["FieldType"] != "u-id":
+                        continue
+                    assert ala["Method"] is None, acase
+                    #print(":::", tup["Key"], acase, ala, end="\n\n")
+                    str_info = f'{box}.{acase}'
+                    ixr = self.table(box).dlist.index
+                    ixr.do_id_hash()
+                    res.append((str_info, ixr.id_hash()))
+        return res
+
     def basic_ok(self) -> bool:
         """ Returns True if everything is basically ok. """
         return self._msg == ""
+
+    def set_encoding(self, encoding="ascii"):
+        jdba.jcommon.SingletonIO().default_encoding = encoding
+
+    def set_db_save(self, write_when:str="a"):
+        assert isinstance(write_when, str)
+        assert write_when in "ad", f"{self.name}, write_when={write_when}"
+        jdba.jbox.IOJData.config_save_if_needed(write_when == "d")
+        return write_when != "d"
 
     def save(self, name:str="", debug=0) -> bool:
         """ Saves table(s): if name provided, saves only the corresponding table.
@@ -99,16 +130,21 @@ class Database(GenDatabase):
             msg = "; checked schema"
         if debug > 0:
             print("About to save:", sorted(self.tables()), msg)
-        is_ok, invalid, _ = self._save_tables(name, debug)
+        is_ok, invalid, whot = self._save_tables(name, debug)
         if debug > 0:
-            if invalid:
-                print("At least one invalid table:", invalid)
+            if is_ok:
+                print(f"Saved {self.name}: {whot if whot else 'Nepia'}")
             else:
-                print(f"Saved {self.name} all", is_ok)
+                print("At least one invalid table:", invalid)
         return is_ok
 
-    def _save_tables(self, name, debug):
-        fails = []
+    def _save_tables(self, name, debug) -> tuple:
+        """ Save database table(s)
+        :param name: the table (box) name
+        :param debug: 1 to show debug info
+        :return: triplet of (is_ok, error-message, list-of-tables(bad|good)
+        """
+        saves, fails = [], []
         failed = ""
         if debug > 0:
             print("::: Save tables, msg:", self._msg if self._msg else "-")
@@ -119,18 +155,19 @@ class Database(GenDatabase):
             if debug > 0:
                 print(f"Saving {name} at: {path}")
             return self.table(name).save(path), "", []
-        for key in sorted(self._paths):
-            #print("::: Save table:", key)
-            assert key, self.name
-            is_ok = self._save_tables(key, debug)
+        for tname in sorted(self._paths):
+            assert tname, self.name
+            is_ok, _, _ = self._save_tables(tname, debug)
             if not is_ok:
                 if not failed:
-                    failed = key
-                fails.append(key)
+                    failed = tname
+                fails.append(tname)
+            elif self.table(tname).written():
+                saves.append(tname)
         if fails:
             self._msg = f"Failed Save(s): {'; '.join(fails)}"
             return False, failed, fails
-        return True, "", []
+        return True, "", saves
 
     def complain_err(self, msg, opt):
         if opt:

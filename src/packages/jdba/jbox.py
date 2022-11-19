@@ -22,15 +22,41 @@ BASIC_DICT_TAIL = {
 class IOJData(jcommon.GenericData):
     """ Input/ output operations for JSON data.
     """
+    _write_when = "a"  # 'a'=always, 'd'=different (save if different)
+
+    def __init__(self, name):
+        super().__init__(name)
+        self._did_write = False
+
+    def written(self) -> bool:
+        return self._did_write
+
+    @staticmethod
+    def save_always() -> bool:
+        return IOJData._write_when == "a"
+
+    @staticmethod
+    def config_save_if_needed(different=True):
+        IOJData._write_when = "d" if different else "a"
+
     def _write_content(self, path:str, astr:str) -> bool:
         """ Write content, Linux text (no CR-LF, but only LF)
         """
+        self._did_write = False
+        if IOJData._write_when == "d":
+            if os.path.isfile(path):
+                with open(path, "rb") as fdin:
+                    there = fdin.read()
+                alen = len(there)
+                if alen == len(astr) and there.decode(self._encoding) == astr:
+                    return True
         if os.name == "nt":
             with open(path, "wb") as fdout:
                 fdout.write(astr.encode(self._encoding))
-            return True
-        with open(path, "w", encoding=self._encoding) as fdout:
-            fdout.write(astr)
+        else:
+            with open(path, "w", encoding=self._encoding) as fdout:
+                fdout.write(astr)
+        self._did_write = True
         return True
 
     def _write_stream(self, fdout, astr:str) -> bool:
