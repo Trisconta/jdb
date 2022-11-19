@@ -55,6 +55,10 @@ class Database(GenDatabase):
         """ Returns all indexes """
         return self._index
 
+    def table_names(self) -> list:
+        """ Returns simple table names """
+        return sorted(self.tables())
+
     def tables(self) -> dict:
         """ Returns all indexes """
         return self._index["tables"]
