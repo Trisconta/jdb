@@ -39,11 +39,14 @@ class IOJData(jcommon.GenericData):
     def config_save_if_needed(different=True):
         IOJData._write_when = "d" if different else "a"
 
-    def _write_content(self, path:str, astr:str) -> bool:
+    def _write_content(self, path:str, astr:str, debug=0) -> bool:
         """ Write content, Linux text (no CR-LF, but only LF)
         """
+        assert debug >= 0, path
         self._did_write = False
         if IOJData._write_when == "d":
+            if debug > 0:
+                print("write_content(), check:", path, self._encoding)
             if os.path.isfile(path):
                 with open(path, "rb") as fdin:
                     there = fdin.read()

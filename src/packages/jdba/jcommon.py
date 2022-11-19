@@ -91,7 +91,9 @@ class GenericData():
             encoding = SingletonIO().default_encoding
         if encoding in ("latin-1",):
             encoding = "ISO-8859-1"
-        assert encoding
+        if encoding is None:
+            encoding = "ascii"
+        assert encoding, self.name
         assert isinstance(encoding, str)
         self._encoding = encoding
         return True
