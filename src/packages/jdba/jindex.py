@@ -27,6 +27,8 @@ class GeneralIndex():
 class JIndex(GeneralIndex):
     """ J-son based indexing
     """
+    do_jstrip = True
+
     def __init__(self, name=""):
         super().__init__(name)
         self._seqid = {}
@@ -92,7 +94,7 @@ class JIndex(GeneralIndex):
                 msgs.append(msg)
             else:
                 where[an_id] = idx
-            whot, namer = self._best_name(item)
+            whot, namer = self._best_name(item, JIndex.do_jstrip)
             if knames["keying"]:
                 if whot not in knames["keying"]:
                     knames["keying"].append(whot)
@@ -113,7 +115,7 @@ class JIndex(GeneralIndex):
         mash["id-to-idx"] = where
         return True
 
-    def _best_name(self, dct):
+    def _best_name(self, dct, j_strip=True):
         if "Name" in dct:
             return "Name", dct["Name"]
         tics, keying = [], []
@@ -124,4 +126,8 @@ class JIndex(GeneralIndex):
             if isinstance(aval, (str, float, int)):
                 keying.append(key)
                 tics.append(f"{aval}")
-        return '+'.join(keying), '|'.join(tics)
+        astr = '|'.join(tics)
+        if j_strip:
+            astr = astr.rstrip('|')
+        res = ('+'.join(keying), astr)
+        return res
