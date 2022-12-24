@@ -110,7 +110,9 @@ class JBox(IOJData):
         del mine["Id"]
         for key, aval in new.items():
             mine[key] = aval
-        if "Id" not in mine:
+        if "Id" not in mine or mine["Id"] == 0:
+            if len(data) > 1:
+                last_id = data[-2]["Id"] + 1
             mine["Id"] = last_id
         new_idx = alen - 1
         if s_append == "APP":
