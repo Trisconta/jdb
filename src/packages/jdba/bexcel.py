@@ -100,8 +100,10 @@ class WCell(jdba.jcommon.GenericData):
             if as_int == "d":  # show decimal when applicable
                 if isinstance(a_val, int):
                     return int(a_val)
-            res, _ = self. _num_format(a_val)
-            astr = ("{" + res + "}").format(a_val)
+            num_fmt, _ = self._num_format(a_val)
+            if a_val is None:
+                a_val = 0.0
+            astr = ("{" + num_fmt + "}").format(a_val)
             return float(astr)
         return self._cached()
 
