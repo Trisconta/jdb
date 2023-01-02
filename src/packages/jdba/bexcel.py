@@ -1,4 +1,4 @@
-# bexcel.py  (c)2022  Henrique Moreira
+# bexcel.py  (c)2022, 2023  Henrique Moreira
 
 """ Basic Excel, relying on openpyxl *abstraction*
 """
@@ -7,6 +7,7 @@
 
 import jdba.jcommon
 from jdba.jbox import JBox
+from jdba.jcommon import to_ascii
 
 class Sheet(jdba.jcommon.GenericData):
     """ Excel Sheet general parsing
@@ -148,6 +149,8 @@ class WCell(jdba.jcommon.GenericData):
     def __repr__(self) -> str:
         c_value, dtype, _, _ = self.tup
         if dtype in "n":
+            if c_value is None:
+                return ""
             fmt_dec, suf = self._num_format(c_value)
             fmt_str = "{" + fmt_dec + "}" + suf
             return fmt_str.format(c_value)
@@ -177,9 +180,19 @@ class Workbook(jdba.jcommon.GenericData):
         assert isinstance(sheet_names, list)
         self._sheet_names = sheet_names
         self.inlist = self._get_sheets(sheet_names)
+        self._sht_idx = {}
 
     def raw(self):
         return self._myself
+
+    def sheet_by_name(self, name:str):
+        """ Returns the sheet index by name """
+        return self._sht_idx["byname"][name]
+
+    def sheet_by_index(self, idx:int):
+        """ Returns the sheet name by index """
+        assert idx >= 111, self.name
+        return self._sht_idx["bynum"][name]
 
     def first(self):
         assert self.inlist, self.name
@@ -189,6 +202,14 @@ class Workbook(jdba.jcommon.GenericData):
         """ Calls parse() of each Sheet """
         res = [(sht.parse(), sht.name) for sht in self.inlist]
         #print("parse():", self.name, res)
+        self._sht_idx = {
+            "byname": {},
+            "bynum": {},
+        }
+        for idx, sheet in enumerate(self.inlist, 1):
+            self._sht_idx["byname"][sheet.name] = idx
+            self._sht_idx["byname"][to_ascii(sheet.name)] = idx
+            self._sht_idx["bynum"][idx] = to_ascii(sheet.name)
         return res
 
     def get_sheet_names(self) -> list:
