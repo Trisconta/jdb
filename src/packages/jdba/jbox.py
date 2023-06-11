@@ -1,4 +1,4 @@
-# jbox.py  (c)2022  Henrique Moreira
+# jbox.py  (c)2022, 2023  Henrique Moreira
 
 """ JBox - a box of cases
 

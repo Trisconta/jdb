@@ -187,14 +187,16 @@ class Workbook(jdba.jcommon.GenericData):
     def raw(self):
         return self._myself
 
-    def sheet_by_name(self, name:str):
+    def sheet_by_name(self, name:str) -> int:
         """ Returns the sheet index by name """
         return self._sht_idx["byname"][name]
 
-    def sheet_by_index(self, idx:int):
+    def sheet_by_index(self, idx:int) -> str:
         """ Returns the sheet name by index """
         assert idx >= 1, self.name
-        return self._sht_idx["bynum"][name]
+        astr = self._sht_idx["bynum"][idx]
+        assert astr, self.name
+        return astr
 
     def first(self):
         assert self.inlist, self.name
