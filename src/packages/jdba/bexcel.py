@@ -193,7 +193,7 @@ class Workbook(jdba.jcommon.GenericData):
 
     def sheet_by_index(self, idx:int):
         """ Returns the sheet name by index """
-        assert idx >= 111, self.name
+        assert idx >= 1, self.name
         return self._sht_idx["bynum"][name]
 
     def first(self):
