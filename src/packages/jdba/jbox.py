@@ -24,8 +24,8 @@ class IOJData(jcommon.GenericData):
     """
     _write_when = "a"  # 'a'=always, 'd'=different (save if different)
 
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, name, encoding=None):
+        super().__init__(name, encoding)
         self._did_write = False
 
     def written(self) -> bool:
