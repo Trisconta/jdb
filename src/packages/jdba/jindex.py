@@ -21,12 +21,14 @@ class GeneralIndex():
         self.byname = {}
         self._hash = {}
 
-    def get_ptr(name:str):
+    def get_ptr(self, name:str):
         return self.byname["ptr"][name]
 
 class JIndex(GeneralIndex):
     """ J-son based indexing
     """
+    do_jstrip = True
+
     def __init__(self, name=""):
         super().__init__(name)
         self._seqid = {}
@@ -39,6 +41,14 @@ class JIndex(GeneralIndex):
 
     def id_hash(self) -> dict:
         return self._hash
+
+    def id_to_idx(self, acase:str) -> dict:
+        """ Returns the dictionary that indexes an 'Id' to the list index of that 'sequence'. """
+        dct = self._hash[acase]["id-to-idx"]
+        assert isinstance(dct, dict), "Expected dict"
+        if None in dct:
+            return {}
+        return dct
 
     def do_id_hash(self) -> list:
         """ Returns the list of normalized cases.
@@ -67,18 +77,24 @@ class JIndex(GeneralIndex):
 		pos.
 		pos.
         """
-
         assert last["Id"] == 0, 'Expected last "Id: 0"'
         id_to_name, name_to_id = {}, {}
         knames = {
             "keying": [],
             "dupname": [],
         }
+        where = {}
+        msgs = []
         for idx, item in enumerate(data):
             an_id = item["Id"]
             if an_id <= 0:
                 continue
-            whot, namer = self._best_name(item)
+            if an_id in where:
+                msg = f"Duplicate Id={an_id}, is: {data[where[an_id]]}"
+                msgs.append(msg)
+            else:
+                where[an_id] = idx
+            whot, namer = self._best_name(item, JIndex.do_jstrip)
             if knames["keying"]:
                 if whot not in knames["keying"]:
                     knames["keying"].append(whot)
@@ -94,9 +110,12 @@ class JIndex(GeneralIndex):
         name_to_id["~"] = anyout if anyout else 0
         mash["id-to-name"] = id_to_name
         mash["name-to-id"] = name_to_id
+        if msgs:
+            where = {None: msgs}
+        mash["id-to-idx"] = where
         return True
 
-    def _best_name(self, dct):
+    def _best_name(self, dct, j_strip=True):
         if "Name" in dct:
             return "Name", dct["Name"]
         tics, keying = [], []
@@ -107,4 +126,8 @@ class JIndex(GeneralIndex):
             if isinstance(aval, (str, float, int)):
                 keying.append(key)
                 tics.append(f"{aval}")
-        return '+'.join(keying), '|'.join(tics)
+        astr = '|'.join(tics)
+        if j_strip:
+            astr = astr.rstrip('|')
+        res = ('+'.join(keying), astr)
+        return res

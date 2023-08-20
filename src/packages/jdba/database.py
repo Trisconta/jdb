@@ -31,9 +31,10 @@ class GenDatabase(jdba.jcommon.GenericData):
 class Database(GenDatabase):
     """ (JSON) Database handling
     """
-    def __init__(self, path, name="", encoding=None):
+    def __init__(self, path, name="", encoding=None, has_schema=True):
         super().__init__(name, encoding)
         self._path = path
+        self._init_schema = {} if has_schema else None
         self._schema, self._names, self._paths = self._initializer(path)
         self._index = self._reload()
         self.default_box = ""
@@ -44,9 +45,19 @@ class Database(GenDatabase):
         if self._auto_validate:
             self._msg = self._schema.validate(self._index)
 
+    def path_refs(self) -> dict:
+        return {} if self._msg else self._paths
+
+    def all_paths(self) -> list:
+        return [self._paths[key] for key in sorted(self._paths)]
+
     def get_indexes(self) -> dict:
         """ Returns all indexes """
         return self._index
+
+    def table_names(self) -> list:
+        """ Returns simple table names """
+        return sorted(self.tables())
 
     def tables(self) -> dict:
         """ Returns all indexes """
@@ -68,11 +79,44 @@ class Database(GenDatabase):
         msg = self._validate_schema()
         if debug > 0:
             print(f"Debug: valid_schema(): {msg if msg else 'OK'}")
+        if msg:
+            self._msg = msg
         return msg == ""
+
+    def index_all(self) -> list:
+        """ Use existing schema to 'do_id_hash()' in all dlist.index(es).
+        Returns a list with indication of the unique indexes ('u-id').
+        """
+        res = []
+        i_list = self._schema.inlist
+        # [(tup["Key"], [(tup["Key"], tup, [(tup["Key"], ala) for ala in ucase if ala["FieldType"] == "u-id"]) for ucase in tup["UCases"]]) for tup in i_list]
+        for tup in i_list:
+            box = tup["Key"]
+            for ucase in tup["UCases"]:
+                for ala in ucase:
+                    acase = ala["Key"]
+                    if ala["FieldType"] != "u-id":
+                        continue
+                    assert ala["Method"] is None, acase
+                    #print(":::", tup["Key"], acase, ala, end="\n\n")
+                    str_info = f'{box}.{acase}'
+                    ixr = self.table(box).dlist.index
+                    ixr.do_id_hash()
+                    res.append((str_info, ixr.id_hash()))
+        return res
 
     def basic_ok(self) -> bool:
         """ Returns True if everything is basically ok. """
         return self._msg == ""
+
+    def set_encoding(self, encoding="ascii"):
+        jdba.jcommon.SingletonIO().default_encoding = encoding
+
+    def set_db_save(self, write_when:str="a"):
+        assert isinstance(write_when, str)
+        assert write_when in "ad", f"{self.name}, write_when={write_when}"
+        jdba.jbox.IOJData.config_save_if_needed(write_when == "d")
+        return write_when != "d"
 
     def save(self, name:str="", debug=0) -> bool:
         """ Saves table(s): if name provided, saves only the corresponding table.
@@ -86,17 +130,24 @@ class Database(GenDatabase):
             msg = "; checked schema"
         if debug > 0:
             print("About to save:", sorted(self.tables()), msg)
-        is_ok, invalid, _ = self._save_tables(name, debug)
+        is_ok, invalid, whot = self._save_tables(name, debug)
         if debug > 0:
-            if invalid:
-                print("At least one invalid table:", invalid)
+            if is_ok:
+                print(f"Saved {self.name}: {whot if whot else 'Nepia'}")
             else:
-                print(f"Saved {self.name} all", is_ok)
+                print("At least one invalid table:", invalid)
         return is_ok
 
-    def _save_tables(self, name, debug):
-        fails = []
+    def _save_tables(self, name, debug) -> tuple:
+        """ Save database table(s)
+        :param name: the table (box) name
+        :param debug: 1 to show debug info
+        :return: triplet of (is_ok, error-message, list-of-tables(bad|good)
+        """
+        saves, fails = [], []
         failed = ""
+        if debug > 0:
+            print("::: Save tables, msg:", self._msg if self._msg else "-")
         if self._msg:
             return False, "", []
         if name:
@@ -104,17 +155,19 @@ class Database(GenDatabase):
             if debug > 0:
                 print(f"Saving {name} at: {path}")
             return self.table(name).save(path), "", []
-        for key in sorted(self._paths):
-            assert key, self.name
-            is_ok = self._save_tables(key, debug)
+        for tname in sorted(self._paths):
+            assert tname, self.name
+            is_ok, _, _ = self._save_tables(tname, debug)
             if not is_ok:
                 if not failed:
-                    failed = key
-                fails.append(key)
+                    failed = tname
+                fails.append(tname)
+            elif self.table(tname).written():
+                saves.append(tname)
         if fails:
             self._msg = f"Failed Save(s): {'; '.join(fails)}"
             return False, failed, fails
-        return True, "", []
+        return True, "", saves
 
     def complain_err(self, msg, opt):
         if opt:
@@ -150,7 +203,8 @@ class Database(GenDatabase):
         #print("Read:", path, "; encoding:", self.get_encoding())
         #print("- NAMES:", names, "\n- PATHS:", paths)
         if not schema:
-            self._msg = f"No json at: {path}"
+            if self._init_schema is not None:
+                self._msg = f"No json schema at: {path}"
             schema = StrictSchema(JBox(name="empty"), [])
         return schema, names, paths
 
@@ -167,6 +221,12 @@ class Database(GenDatabase):
         """ Validates boxes against schema. Returns empty if all ok. """
         msg = self.schema().validate(self.get_indexes())
         return msg
+
+    def corrected(self) -> bool:
+        if not self._msg:
+            return False
+        self._msg = ""
+        return True
 
     def _reload(self) -> dict:
         res = {

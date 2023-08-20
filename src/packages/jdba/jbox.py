@@ -1,4 +1,4 @@
-# jbox.py  (c)2022  Henrique Moreira
+# jbox.py  (c)2022, 2023  Henrique Moreira
 
 """ JBox - a box of cases
 
@@ -22,15 +22,44 @@ BASIC_DICT_TAIL = {
 class IOJData(jcommon.GenericData):
     """ Input/ output operations for JSON data.
     """
-    def _write_content(self, path:str, astr:str) -> bool:
+    _write_when = "a"  # 'a'=always, 'd'=different (save if different)
+
+    def __init__(self, name, encoding=None):
+        super().__init__(name, encoding)
+        self._did_write = False
+
+    def written(self) -> bool:
+        return self._did_write
+
+    @staticmethod
+    def save_always() -> bool:
+        return IOJData._write_when == "a"
+
+    @staticmethod
+    def config_save_if_needed(different=True):
+        IOJData._write_when = "d" if different else "a"
+
+    def _write_content(self, path:str, astr:str, debug=0) -> bool:
         """ Write content, Linux text (no CR-LF, but only LF)
         """
+        assert debug >= 0, path
+        self._did_write = False
+        if IOJData._write_when == "d":
+            if debug > 0:
+                print("write_content(), check:", path, self._encoding)
+            if os.path.isfile(path):
+                with open(path, "rb") as fdin:
+                    there = fdin.read()
+                alen = len(there)
+                if alen == len(astr) and there.decode(self._encoding) == astr:
+                    return True
         if os.name == "nt":
             with open(path, "wb") as fdout:
                 fdout.write(astr.encode(self._encoding))
-            return True
-        with open(path, "w", encoding=self._encoding) as fdout:
-            fdout.write(astr)
+        else:
+            with open(path, "w", encoding=self._encoding) as fdout:
+                fdout.write(astr)
+        self._did_write = True
         return True
 
     def _write_stream(self, fdout, astr:str) -> bool:
@@ -50,6 +79,7 @@ class JBox(IOJData):
         enc = jcommon.J_ENSURE_ASCII if encoding is None else encoding
         self._ensure_ascii = enc
         self.dlist = None
+        self.new_idx = {}
 
     def to_string(self) -> str:
         return self._dump_json_string()
@@ -61,7 +91,8 @@ class JBox(IOJData):
         data = self._data.get(acase)
         if data is None:
             return False
-        is_ok, _ = self._inject_new(acase, data, new, "APP")
+        is_ok, _, new_idx = self._inject_new(acase, data, new, "APP")
+        self.new_idx[acase] = new_idx
         return is_ok
 
     def _inject_new(self, acase, data, new, s_append) -> tuple:
@@ -70,23 +101,25 @@ class JBox(IOJData):
         alen = len(data)
         if alen <= 0:
             # Should have at least one element
-            return False, BASIC_DICT_TAIL
+            return False, BASIC_DICT_TAIL, -1
         last_id = 900
         last = data[-1]
         an_id = last["Id"]
         assert an_id == 0, f"{acase}: bad last elem Id={an_id}"
-        an_id = last_id + 1
         mine = deepcopy(last)
         del mine["Id"]
         for key, aval in new.items():
             mine[key] = aval
-        if "Id" not in mine:
+        if "Id" not in mine or mine["Id"] == 0:
+            if len(data) > 1:
+                last_id = data[-2]["Id"] + 1
             mine["Id"] = last_id
+        new_idx = alen - 1
         if s_append == "APP":
-            data.insert(alen - 1, mine)
+            data.insert(new_idx, mine)
         else:
-            return False, None
-        return True, mine
+            return False, None, -1
+        return True, mine, new_idx
 
     def load(self, path:str) -> bool:
         self._data = {}
@@ -100,8 +133,13 @@ class JBox(IOJData):
         self._data = data
         return True
 
+    def flush(self) -> bool:
+        self.new_idx = {}
+        return True
+
     def save(self, path:str) -> bool:
         """ Save content to a file, at 'path'. """
+        self.flush()
         astr = self._dump_json_string(self._ensure_ascii)
         astr += "\n"
         try:

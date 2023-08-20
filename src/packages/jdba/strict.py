@@ -32,8 +32,10 @@ class StrictSchema(jdba.jcommon.DataSchema):
         """ Returns an empty string if all ok. """
         order = []
         used = {}
+        box = None
         for box in self.inlist:
-            an_id, tname, cases = box["Id"], box["Key"], box["Cases"]
+            an_id, tname, cases = box["Id"], box["Key"], box["UCases"]
+            assert an_id >= 0, tname
             assert box["Title"], tname
             #print(tname, cases); print()
             order.append((tname, cases, box))
@@ -41,6 +43,7 @@ class StrictSchema(jdba.jcommon.DataSchema):
             used[tname] = cases
         if not ndexing:
             return "Nothing to validate"
+        assert box is not None, f"StrictSchema(), box? {self._path}"
         msg = self._validate_ordr(
             (tname, cases, box, used),
             ndexing, order,
@@ -74,8 +77,9 @@ class StrictSchema(jdba.jcommon.DataSchema):
                     assert an_id == idx, msg
                     elems = dlist.get_case(key)
                     msg = xvalidate_kinds(field_type, elems, infos)
+                    assert isinstance(msg, str)
                     if msg:
-                        return msg
+                        return f"case@{key} {msg}"
         return ""
 
 def xvalidate_kinds(field_type, elems, infos) -> str:
@@ -138,6 +142,7 @@ def methods_validate(elems, infos, methods, depth, m_str) -> str:
     assert m_str
     assert depth <= 0
     _, acase, c_id, _ = infos
+    assert acase, f"methods={methods}"
     assert c_id >= 1
     for methd in methods:
         an_id = methd["Id"]

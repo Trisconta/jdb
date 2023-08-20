@@ -6,6 +6,7 @@
 # pylint: disable=missing-function-docstring
 
 import json
+import unidecode
 from jdba.jindex import JIndex
 
 J_ENSURE_ASCII = True
@@ -91,7 +92,9 @@ class GenericData():
             encoding = SingletonIO().default_encoding
         if encoding in ("latin-1",):
             encoding = "ISO-8859-1"
-        assert encoding
+        if encoding is None:
+            encoding = "ascii"
+        assert encoding, self.name
         assert isinstance(encoding, str)
         self._encoding = encoding
         return True
@@ -305,3 +308,7 @@ def overview(data, depth=0):
         return data
     res = f"(type={type(data)})"
     return res
+
+def to_ascii(astr):
+    ustr = unidecode.unidecode(astr)
+    return ustr
