@@ -6,13 +6,15 @@ See also: tinycode/waxpage/txc.py
 
 # pylint: disable=missing-function-docstring
 
-import jdba.jbox as jbox
+import os.path
+from jdba import jbox
 
 class TxcFile(jbox.IOJData):
     """ Input/ output operations for TXC (TeXt with Context) files
     """
     def __init__(self, fname="", name=""):
         super().__init__(name, encoding="ISO-8859-1")
+        self.head = {}
         self._path = fname
         self._astring = ""
         self._header = ""
@@ -28,13 +30,15 @@ class TxcFile(jbox.IOJData):
         return self._data
 
     def header(self) -> str:
-        """ Returns the header, if any. """
+        """ Returns the header (raw) string, if any. """
         return self._header
 
-    def load(self, path:str) -> bool:
-        self._path = path
+    def load(self, path:str="") -> bool:
+        if path:
+            self._path = path
+        fname = self._path
         try:
-            with open(path, "r", encoding=self._encoding) as fdin:
+            with open(fname, "r", encoding=self._encoding) as fdin:
                 astr = fdin.read()
         except FileNotFoundError:
             return False
@@ -55,6 +59,7 @@ class TxcFile(jbox.IOJData):
         """ Parse TXC formatting. """
         errs = 0
         hdr, idx = "", 0
+        mid = ""
         spl = self._astring.splitlines()
         if not spl:
             return False
@@ -62,7 +67,8 @@ class TxcFile(jbox.IOJData):
             hdr = spl[0] + "\n"
             idx = 1
             if spl[idx].startswith("#"):
-                hdr += spl[idx] + "\n"
+                mid = spl[idx]
+                hdr += mid + "\n"
                 idx += 1
         last_empty = -1
         res, last = [], []
@@ -88,6 +94,12 @@ class TxcFile(jbox.IOJData):
         self._header = hdr
         enc = get_coding_str(hdr)
         self._in_encoding = "" if enc.startswith(":") else enc
+        self.head = {
+            "encoding": self._in_encoding,
+            "mid": mid,
+            "mid-describe": mid[2:] if mid.startswith("# ") else "",
+            "name": self._get_txc_name(self._path),
+        }
         self._data = res
         return errs == 0
 
@@ -102,6 +114,16 @@ class TxcFile(jbox.IOJData):
             astr += '\n' * self._num_lines_sep
         self._astring = self._header + astr
         return True
+
+    def _get_txc_name(self, fname):
+        if not fname:
+            return ""
+        astr = os.path.basename(fname)
+        if not astr:
+            return ""
+        if astr[:-1].endswith(".tx"):
+            return astr[:-len(".txc")]
+        return astr
 
 def get_coding_str(astr:str) -> str:
     """ Returns ':msg' upon error, or the corresponding interpreted coding:
