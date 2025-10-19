@@ -17,16 +17,25 @@ VALID_CODINGS = (
 )
 
 
-def tester(infile):
+def tester(infile, do_save=True):
     mbk = MyBook()
     isok = mbk.load(infile)
     assert isok, infile
-    sht = mbk.sheet()
-    wbk = openpyxl.Workbook(); new_sheet = wbk.active
-    dct = copycat(sht, new_sheet)
-    for key, item in dct.items():
-        print(key, item)
+    #sht = mbk.sheet()
+    wbk = openpyxl.Workbook()
+    new_sheet = wbk.active
+    #dct = copycat(sht, new_sheet)
+    dct = mbk.copy_sheet(1, new_sheet)
+    show_w(dct, "widths")
+    if not do_save:
+        return False
+    mbk.update_scale(new_sheet)
     wbk.save("/tmp/new.xlsx")
+    return True
+
+def show_w(dct, what):
+    for key, item in dct[what].items():
+        print(key, item)
 
 
 class GenData:
@@ -49,6 +58,10 @@ class GenData:
         except ValueError:
             idx = -1
         return idx
+
+    def conv_to_pixels(self, x_width, factor=7):
+        """ Converts Excel widths stored into pixels, approximately. """
+        return conv_x_to_pixels(x_width, factor)
 
     def __str__(self) -> str:
         return self.to_string()
@@ -74,6 +87,7 @@ class MyBook(GenData):
         )
         self._read_only = False
         self._book = None
+        self._info = {}
 
     def book(self):
         assert self._book is not None, "book?"
@@ -93,6 +107,29 @@ class MyBook(GenData):
         except FileNotFoundError:
             return False
         self._book = wb1
+        return True
+
+    def copy_sheet(self, index:int, new_sheet):
+        assert 0 <= index <= len(self._book.worksheets), "copy_sheet() out of range"
+        sht = self.sheet(index)
+        dct = copycat(sht, new_sheet)
+        self._info = dct
+        return dct
+
+    def update_scale(self, sheet):
+        """ Automatically updates the scale of 'sheet' (as output) for printing (A4). """
+        w_vals = self._info["widths"]
+        widths = [w_vals[key][1] for key in w_vals]
+        scale = calculate_print_scale(widths)
+        sheet.page_setup.scale = scale
+        return True
+
+    def update_fits(self, sheet, fit_width=1, fit_height=1):
+        """ Fits page width and page(s) heights.
+        """
+        sheet.page_setup.scale = None
+        sheet.page_setup.fitToWidth = fit_width		# fit to 1 page wide
+        sheet.page_setup.fitToHeight = fit_height	# fit to 1 pages tall
         return True
 
 
@@ -117,9 +154,15 @@ def copycat(sheet_source, sheet_new=None, bare_width=25):
         col_letter = get_column_letter(col_idx)
         if col_letter in sheet_source.column_dimensions:
             width = sheet_source.column_dimensions[col_letter].width
-            larg[col_letter] = (width, width)
+            ori = width
         else:
-            larg[col_letter] = (None, last)
+            ori = None
+            width = last
+        larg[col_letter] = (
+            ori,
+            width,
+            conv_x_to_pixels(width),
+        )
         last = width
     for col_letter in sorted(larg):
         largo = larg[col_letter][1]
@@ -158,6 +201,21 @@ def update_cell_style(new_cell, cell):
     new_cell.protection = copy.copy(cell.protection)
     new_cell.alignment = copy.copy(cell.alignment)
     return True
+
+
+def conv_x_to_pixels(x_width, factor=7) -> int:
+    """ Converts Excel widths stored into pixels, approximately. """
+    pix = round(x_width * factor + 5)
+    return pix
+
+
+def calculate_print_scale(column_widths, max_pixels=756):
+    """ Given a list of Excel column widths, calculate the print scale percentage
+    to fit within max_pixels (default: A4 landscape printable width).
+    """
+    total_pixels = sum(conv_x_to_pixels(width) for width in column_widths)
+    scale = min(100, round((max_pixels / total_pixels) * 100))
+    return scale
 
 
 # Main script
