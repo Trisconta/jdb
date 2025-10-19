@@ -1,3 +1,6 @@
+# ignore test-input.xlsx, etc.
+/src/packages/excelcat/test-*.xlsx
+
 # Python cache
 __pycache__
 *.pyc
