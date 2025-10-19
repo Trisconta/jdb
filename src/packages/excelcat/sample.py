@@ -27,7 +27,7 @@ def script(args):
     Print Preview: A4 Landscape props ok, but saving as automatic didn't work well.
     """
     out_save = "/tmp/new.xlsx"
-    time_suffix = f" &T" if HAS_TIME_IN_DATE else ""
+    time_suffix = " &T" if HAS_TIME_IN_DATE else ""
     opts = {
         "out": out_save,
         "page-header": [
@@ -38,7 +38,7 @@ def script(args):
         "page-footer": [
             "&L",
             "&CPag.&P/&N",
-            f"&R",
+            "&R",
         ],
     }
     param = args if args else ["test-input.xlsx"]

@@ -109,6 +109,19 @@ class MyBook(GenData):
         self._book = wb1
         return True
 
+    def widths(self):
+        """ Can be used after copy_sheet() to get the cell widths.
+        It has a triplet: (a, b, c)
+		a: None (when absent or auto-sized),
+		b: width in Excel sizing,
+		c: rough conversion to pixels (using an 11pt font)
+        Returns a pair of 'widths' as calculated, as the linear listing.
+        """
+        wds = self._info["widths"]
+        lst = [wds[key][2] for key in sorted(wds)]
+        # e.g. (dct, (88, 158, 109, 109, 142, 350))
+        return (wds, tuple(lst))
+
     def copy_sheet(self, index:int, new_sheet):
         assert 0 <= index <= len(self._book.worksheets), "copy_sheet() out of range"
         sht = self.sheet(index)
