@@ -1,6 +1,6 @@
-""" excelcat -- Excel copycat
+""" excelcat -- Excel copycat package
 """
 
-import excelcat.pyxl
+from excelcat.pyxl import MyBook
 
 MODULE_VERSION = "1.01 12"

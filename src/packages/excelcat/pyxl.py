@@ -10,7 +10,7 @@ from json import dumps
 import openpyxl
 from openpyxl.utils import get_column_letter
 from openpyxl.cell.cell import Cell
-
+from openpyxl.worksheet.header_footer import HeaderFooter
 
 VALID_CODINGS = (
     "ascii", "utf-8", "ISO-8859-1",
@@ -127,10 +127,59 @@ class MyBook(GenData):
     def update_fits(self, sheet, fit_width=1, fit_height=1):
         """ Fits page width and page(s) heights.
         """
+        sheet.page_setup.pageSetupType = 'fitToPage'
         sheet.page_setup.scale = None
         sheet.page_setup.fitToWidth = fit_width		# fit to 1 page wide
         sheet.page_setup.fitToHeight = fit_height	# fit to 1 pages tall
+        sheet.page_setup.paperSize = sheet.PAPERSIZE_A4
         return True
+
+    def update_new_scale(self, sheet, new_scale=100, paper_size=None):
+        """ Fits page with a new (manual) scale value.
+        """
+        sheet.page_setup.scale = new_scale
+        sheet.page_setup.fitToWidth = None
+        sheet.page_setup.fitToHeight = None
+        if paper_size is None:
+            return False
+        sheet.page_setup.paperSize = paper_size
+        return True
+
+    def update_headers(self, new_sheet, hdr=None, ftr=None):
+        h_obj = HeaderFooter()
+        left, center, right = (None, None, None) if hdr is None else hdr
+        left_f, center_f, right_f = (None, None, None) if ftr is None else ftr
+        if left:
+            h_obj.left_header = left
+        if center:
+            h_obj.center_header = center
+        if center:
+            h_obj.right_header = right
+        if left_f:
+            h_obj.left_footer = left_f
+        if center_f:
+            h_obj.center_footer = center_f
+        if center_f:
+            h_obj.right_footer = right_f
+        # Force Excel to recognize the header/footer
+        h_obj.differentFirst = False
+        h_obj.differentOddEven = False
+        new_sheet.header_footer = h_obj
+        # Apply to oddHeader to ensure Excel picks it up
+        new_sheet.oddHeader.left.text = self._replaced(left, new_sheet) or ""
+        new_sheet.oddHeader.center.text = self._replaced(center, new_sheet) or ""
+        new_sheet.oddHeader.right.text = self._replaced(right, new_sheet) or ""
+        # The same for footer
+        new_sheet.oddFooter.left.text = self._replaced(left_f, new_sheet) or ""
+        new_sheet.oddFooter.center.text = self._replaced(center_f, new_sheet) or ""
+        new_sheet.oddFooter.right.text = self._replaced(right_f, new_sheet) or ""
+        # Returns True if any of header elements is not None
+        return any(hdr)
+
+    def _replaced(self, astr, sheet):
+        title = sheet.title
+        astr = astr.replace("$101", title)
+        return astr
 
 
 def copycat(sheet_source, sheet_new=None, bare_width=25):
